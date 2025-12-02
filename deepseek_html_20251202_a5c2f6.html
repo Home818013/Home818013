@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ДЕСЯТКА | ЭФИРНОЕ ТЕЛЕВИДЕНИЕ</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* ===== ПОЛНОЭКРАННЫЙ TV-РЕЖИМ ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #000;
+            color: #fff;
+            font-family: 'Arial', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            cursor: none; /* Скрываем курсор как в настоящем ТВ */
+        }
+        
+        /* ===== ОСНОВНОЙ ЭКРАН ===== */
+        .tv-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 1;
+        }
+        
+        #broadcast-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Сохраняем пропорции, черные полосы если нужно */
+            background: #000;
+        }
+        
+        /* ===== TV-ИНФОРМАЦИЯ (как в ТВ-уголке) ===== */
+        .tv-info {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 25px;
+            border-radius: 10px;
+            border-left: 5px solid #ff0000;
+            z-index: 10;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+            animation: fadeIn 1s ease-out;
+        }
+        
+        .tv-logo {
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            letter-spacing: 2px;
+        }
+        
+        .tv-channel {
+            color: #ff0000;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        
+        .tv-program {
+            color: #fff;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .tv-time {
+            color: #aaa;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        /* ===== TV-СТАТУС (как в старых ТВ) ===== */
+        .tv-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 10px;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+            text-align: right;
+            font-size: 14px;
+            color: #0f0;
+        }
+        
+        .status-item {
+            margin: 3px 0;
+        }
+        
+        /* ===== TV-ЗАСТАВКА (при загрузке) ===== */
+        .tv-splash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #000, #111);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        .splash-logo {
+            font-size: 48px;
+            color: #fff;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px #ff0000;
+            animation: glow 2s infinite alternate;
+        }
+        
+        .splash-text {
+            color: #aaa;
+            text-align: center;
+            max-width: 500px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        
+        .splash-loading {
+            width: 200px;
+            height: 3px;
+            background: #333;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .splash-progress {
+            height: 100%;
+            background: #ff0000;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        /* ===== TV-ШУМ (при ошибке) ===== */
+        .tv-noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                #000 0px,
+                #111 1px,
+                #222 2px,
+                #111 3px,
+                #000 4px
+            );
+            background-size: 100% 4px;
+            animation: noise 0.1s infinite;
+            display: none;
+            z-index: 5;
+        }
+        
+        /* ===== TV-ТЕКСТ (бегущая строка) ===== */
+        .tv-ticker {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255, 0, 0, 0.8);
+            color: #fff;
+            padding: 10px 0;
+            overflow: hidden;
+            z-index: 10;
+        }
+        
+        .ticker-text {
+            display: inline-block;
+            white-space: nowrap;
+            animation: ticker 30s linear infinite;
+            font-size: 16px;
+            padding-left: 100%;
+        }
+        
+        /* ===== АНИМАЦИИ ===== */
+        @keyframes glow {
+            from { text-shadow: 0 0 10px #ff0000; }
+            to { text-shadow: 0 0 20px #ff0000, 0 0 30px #ff0000; }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes noise {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 4px; }
+        }
+        
+        @keyframes ticker {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        /* ===== АДАПТИВНОСТЬ ===== */
+        @media (max-width: 768px) {
+            .tv-info {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                max-width: none;
+            }
+            
+            .tv-status {
+                bottom: 10px;
+                right: 10px;
+                left: 10px;
+                text-align: center;
+            }
+            
+            .splash-logo {
+                font-size: 32px;
+            }
+        }
+        
+        /* ===== СКРЫТЫЕ ЭЛЕМЕНТЫ ===== */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- TV ШУМ (при ошибке) -->
+    <div class="tv-noise" id="tv-noise"></div>
+    
+    <!-- ЗАСТАВКА ПРИ ЗАГРУЗКЕ -->
+    <div class="tv-splash" id="tv-splash">
+        <div class="splash-logo">ДЕСЯТКА TV</div>
+        <div class="splash-text" id="splash-text">
+            Подключение к эфирному вещанию...<br>
+            Репозиторий: Home818013/vid
+        </div>
+        <div class="splash-loading">
+            <div class="splash-progress" id="splash-progress"></div>
+        </div>
+    </div>
+    
+    <!-- ОСНОВНОЙ ЭКРАН -->
+    <div class="tv-screen" id="tv-screen">
+        <video id="broadcast-video" autoplay muted playsinline>
+            <!-- Видео загрузится через JavaScript -->
+        </video>
+    </div>
+    
+    <!-- TV ИНФОРМАЦИЯ -->
+    <div class="tv-info" id="tv-info">
+        <div class="tv-logo">ДЕСЯТКА TV</div>
+        <div class="tv-channel">📺 ЭФИРНОЕ ВЕЩАНИЕ</div>
+        <div class="tv-program" id="current-program">Загрузка программы...</div>
+        <div class="tv-time">
+            <span id="current-time">--:--</span>
+            <span id="video-duration">--:--</span>
+        </div>
+    </div>
+    
+    <!-- TV СТАТУС -->
+    <div class="tv-status" id="tv-status">
+        <div class="status-item">📡 ПРЯМОЙ ЭФИР</div>
+        <div class="status-item">🎬 <span id="video-count">0</span> видео в ротации</div>
+        <div class="status-item">🕐 <span id="uptime">00:00:00</span></div>
+        <div class="status-item">👁️ <span id="viewers">1</span> зритель</div>
+    </div>
+    
+    <!-- БЕГУЩАЯ СТРОКА -->
+    <div class="tv-ticker" id="tv-ticker">
+        <div class="ticker-text" id="ticker-text">
+            ДЕСЯТКА TV | Эфирное вещание | Видео из репозитория Home818013/vid | Автоматическая ротация | Присоединяйтесь к эфиру в любое время
+        </div>
+    </div>
+
+    <script>
+        // ===== КОНФИГУРАЦИЯ ЭФИРА =====
+        const BROADCAST_CONFIG = {
+            GITHUB_USER: "Home818013",
+            REPO_NAME: "Home818013.github.io",
+            VIDEOS_PATH: "vid",
+            BRANCH: "main",
+            BROADCAST_START_TIME: Date.now(), // Время начала эфира (единое для всех)
+            VIDEO_CYCLE_DURATION: 3600000, // 1 час на полный цикл видео
+            SYNC_INTERVAL: 30000 // Синхронизация каждые 30 секунд
+        };
+
+        // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
+        let broadcastVideos = [];
+        let currentBroadcastIndex = 0;
+        let broadcastStartTime = 0;
+        let viewersCount = 1; // Начинаем с 1 (текущий пользователь)
+        let uptimeInterval;
+
+        // ===== ИНИЦИАЛИЗАЦИЯ ЭФИРА =====
+        async function initializeBroadcast() {
+            const splash = document.getElementById('tv-splash');
+            const splashText = document.getElementById('splash-text');
+            const splashProgress = document.getElementById('splash-progress');
+            
+            try {
+                // Шаг 1: Получаем список видео из репозитория
+                splashText.textContent = "Загрузка списка видео из репозитория...";
+                splashProgress.style.width = '30%';
+                
+                const videos = await loadVideosFromGitHub();
+                
+                if (videos.length === 0) {
+                    throw new Error("В папке 'vid' нет видео файлов!");
+                }
+                
+                broadcastVideos = videos.sort((a, b) => a.name.localeCompare(b.name));
+                
+                // Шаг 2: Рассчитываем текущую позицию в эфире
+                splashText.textContent = "Синхронизация с эфиром...";
+                splashProgress.style.width = '60%';
+                
+                await calculateCurrentBroadcastPosition();
+                
+                // Шаг 3: Запускаем эфир
+                splashText.textContent = "Запуск эфирного вещания...";
+                splashProgress.style.width = '90%';
+                
+                setTimeout(() => {
+                    splash.style.display = 'none';
+                    startBroadcast();
+                    updateViewersCounter();
+                    startUptimeCounter();
+                    showBroadcastInfo();
+                }, 1000);
+                
+            } catch (error) {
+                console.error("Ошибка инициализации эфира:", error);
+                showErrorState(error.message);
+            }
+        }
+
+        // ===== ЗАГРУЗКА ВИДЕО ИЗ GITHUB =====
+        async function loadVideosFromGitHub() {
+            const apiUrl = `https://api.github.com/repos/${BROADCAST_CONFIG.GITHUB_USER}/${BROADCAST_CONFIG.REPO_NAME}/contents/${BROADCAST_CONFIG.VIDEOS_PATH}?ref=${BROADCAST_CONFIG.BRANCH}`;
+            
+            const response = await fetch(apiUrl);
+            
+            if (!response.ok) {
+                throw new Error(`Ошибка GitHub API: ${response.status}`);
+            }
+            
+            const files = await response.json();
+            
+            // Фильтруем видео файлы
+            const videoExtensions = ['.mp4', '.mkv', '.webm', '.avi', '.mov'];
+            return files
+                .filter(file => 
+                    !file.name.startsWith('.') && 
+                    videoExtensions.some(ext => file.name.toLowerCase().endsWith(ext))
+                )
+                .map(file => ({
+                    name: file.name,
+                    url: `https://raw.githubusercontent.com/${BROADCAST_CONFIG.GITHUB_USER}/${BROADCAST_CONFIG.REPO_NAME}/${BROADCAST_CONFIG.BRANCH}/${BROADCAST_CONFIG.VIDEOS_PATH}/${encodeURIComponent(file.name)}`,
+                    size: file.size
+                }));
+        }
+
+        // ===== РАСЧЁТ ТЕКУЩЕЙ ПОЗИЦИИ В ЭФИРЕ =====
+        async function calculateCurrentBroadcastPosition() {
+            // Время с начала эфира (моделируем, что эфир начался в 00:00 сегодня)
+            const now = new Date();
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+            broadcastStartTime = startOfDay.getTime();
+            
+            // Текущее время с начала эфира (в миллисекундах)
+            const timeSinceStart = Date.now() - broadcastStartTime;
+            
+            // Определяем, какое видео должно идти сейчас
+            if (broadcastVideos.length > 0) {
+                // Предполагаем, что все видео идут подряд
+                // В реальном ТВ здесь была бы сложная логика с длительностями видео
+                const videoIndex = Math.floor((timeSinceStart / BROADCAST_CONFIG.VIDEO_CYCLE_DURATION) * broadcastVideos.length) % broadcastVideos.length;
+                currentBroadcastIndex = videoIndex;
+                
+                // Рассчитываем позицию внутри текущего видео
+                const timeInCycle = timeSinceStart % BROADCAST_CONFIG.VIDEO_CYCLE_DURATION;
+                const timePerVideo = BROADCAST_CONFIG.VIDEO_CYCLE_DURATION / broadcastVideos.length;
+                const timeInCurrentVideo = timeInCycle % timePerVideo;
+                
+                return {
+                    videoIndex: currentBroadcastIndex,
+                    timeInVideo: timeInCurrentVideo / 1000 // в секундах
+                };
+            }
+            
+            return { videoIndex: 0, timeInVideo: 0 };
+        }
+
+        // ===== ЗАПУСК ЭФИРНОГО ВЕЩАНИЯ =====
+        function startBroadcast() {
+            if (broadcastVideos.length === 0) return;
+            
+            const videoElement = document.getElementById('broadcast-video');
+            const currentVideo = broadcastVideos[currentBroadcastIndex];
+            
+            // Устанавливаем видео
+            videoElement.src = currentVideo.url;
+            
+            // Настройки для Full HD эфира
+            videoElement.muted = true; // Как в общественных местах
+            videoElement.playsInline = true;
+            videoElement.preload = "auto";
+            
+            // Попытка установить качество (браузер сам выберет оптимальное)
+            videoElement.addEventListener('loadedmetadata', function() {
+                document.getElementById('video-duration').textContent = 
+                    formatTime(videoElement.duration);
+                
+                // Ставим на паузу в нужной позиции (если бы была синхронизация)
+                // videoElement.currentTime = startPosition.timeInVideo;
+            });
+            
+            videoElement.addEventListener('error', function(e) {
+                console.error("Ошибка видео:", e);
+                skipToNextVideo();
+            });
+            
+            videoElement.addEventListener('ended', function() {
+                skipToNextVideo();
+            });
+            
+            // Автовоспроизведение
+            videoElement.play().catch(e => {
+                console.warn("Автовоспроизведение заблокировано:", e);
+                // В реальном ТВ просто продолжаем пытаться
+            });
+            
+            // Обновляем информацию
+            updateBroadcastInfo();
+            
+            // Периодическая синхронизация
+            setInterval(synchronizeBroadcast, BROADCAST_CONFIG.SYNC_INTERVAL);
+        }
+
+        // ===== ПЕРЕКЛЮЧЕНИЕ ВИДЕО =====
+        function skipToNextVideo() {
+            currentBroadcastIndex = (currentBroadcastIndex + 1) % broadcastVideos.length;
+            const videoElement = document.getElementById('broadcast-video');
+            const nextVideo = broadcastVideos[currentBroadcastIndex];
+            
+            videoElement.src = nextVideo.url;
+            videoElement.play().catch(e => console.warn("Ошибка автоплея:", e));
+            
+            updateBroadcastInfo();
+        }
+
+        // ===== СИНХРОНИЗАЦИЯ ЭФИРА =====
+        function synchronizeBroadcast() {
+            // В реальной системе здесь была бы синхронизация с сервером
+            // Сейчас просто проверяем, что видео играет
+            const videoElement = document.getElementById('broadcast-video');
+            
+            if (videoElement.paused && broadcastVideos.length > 0) {
+                videoElement.play().catch(e => {
+                    // Тихий фоллбэк: переходим к следующему видео
+                    skipToNextVideo();
+                });
+            }
+            
+            updateBroadcastInfo();
+        }
+
+        // ===== ОБНОВЛЕНИЕ ИНФОРМАЦИИ НА ЭКРАНЕ =====
+        function updateBroadcastInfo() {
+            if (broadcastVideos.length === 0) return;
+            
+            const currentVideo = broadcastVideos[currentBroadcastIndex];
+            const videoElement = document.getElementById('broadcast-video');
+            
+            // Информация о программе
+            document.getElementById('current-program').textContent = 
+                currentVideo.name.replace(/\.[^/.]+$/, ""); // Убираем расширение
+            
+            document.getElementById('video-count').textContent = broadcastVideos.length;
+            
+            // Текущее время
+            const now = new Date();
+            document.getElementById('current-time').textContent = 
+                `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            
+            // Длительность видео
+            if (videoElement.duration && !isNaN(videoElement.duration)) {
+                document.getElementById('video-duration').textContent = 
+                    formatTime(videoElement.duration);
+            }
+        }
+
+        function showBroadcastInfo() {
+            // Показываем информацию на 5 секунд, затем скрываем
+            const info = document.getElementById('tv-info');
+            const status = document.getElementById('tv-status');
+            const ticker = document.getElementById('tv-ticker');
+            
+            info.style.display = 'block';
+            status.style.display = 'block';
+            ticker.style.display = 'block';
+            
+            // Через 10 секунд скрываем инфо (как в ТВ)
+            setTimeout(() => {
+                info.style.opacity = '0';
+                status.style.opacity = '0';
+                setTimeout(() => {
+                    info.style.display = 'none';
+                    status.style.display = 'none';
+                }, 1000);
+            }, 10000);
+        }
+
+        // ===== СЧЁТЧИКИ =====
+        function updateViewersCounter() {
+            // Имитация случайного количества зрителей
+            const baseViewers = 1 + Math.floor(Math.random() * 50);
+            viewersCount = baseViewers;
+            
+            // Плавное изменение каждые 30 секунд
+            setInterval(() => {
+                const change = Math.floor(Math.random() * 5) - 2; // -2..+2
+                viewersCount = Math.max(1, viewersCount + change);
+                document.getElementById('viewers').textContent = viewersCount;
+            }, 30000);
+            
+            document.getElementById('viewers').textContent = viewersCount;
+        }
+
+        function startUptimeCounter() {
+            let seconds = 0;
+            
+            uptimeInterval = setInterval(() => {
+                seconds++;
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                const secs = seconds % 60;
+                
+                document.getElementById('uptime').textContent = 
+                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        // ===== ОБРАБОТКА ОШИБОК =====
+        function showErrorState(errorMessage) {
+            const splash = document.getElementById('tv-splash');
+            const noise = document.getElementById('tv-noise');
+            
+            splash.innerHTML = `
+                <div class="splash-logo" style="color:#ff0000">📡 ОШИБКА ЭФИРА</div>
+                <div class="splash-text" style="color:#ff6666">
+                    ${errorMessage}<br><br>
+                    Проверьте:<br>
+                    1. Репозиторий: ${BROADCAST_CONFIG.GITHUB_USER}/${BROADCAST_CONFIG.REPO_NAME}<br>
+                    2. Папку: ${BROADCAST_CONFIG.VIDEOS_PATH}<br>
+                    3. Наличие видео файлов (MP4, MKV)<br>
+                    4. Доступность репозитория
+                </div>
+                <button onclick="location.reload()" style="
+                    margin-top: 20px;
+                    background: #ff0000;
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 16px;
+                ">ПОВТОРИТЬ ПОДКЛЮЧЕНИЕ</button>
+            `;
+            
+            // Показываем TV-шум на фоне
+            noise.style.display = 'block';
+        }
+
+        // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return "--:--";
+            
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // ===== TV-ПОВЕДЕНИЕ =====
+        document.addEventListener('mousemove', function() {
+            // Показываем элементы управления при движении мыши (как в Smart TV)
+            const info = document.getElementById('tv-info');
+            const status = document.getElementById('tv-status');
+            const ticker = document.getElementById('tv-ticker');
+            
+            info.style.display = 'block';
+            status.style.display = 'block';
+            ticker.style.display = 'block';
+            info.style.opacity = '1';
+            status.style.opacity = '1';
+            
+            // Скрываем через 5 секунд бездействия
+            clearTimeout(window.hideTimeout);
+            window.hideTimeout = setTimeout(() => {
+                info.style.opacity = '0';
+                status.style.opacity = '0';
+                setTimeout(() => {
+                    info.style.display = 'none';
+                    status.style.display = 'none';
+                }, 1000);
+            }, 5000);
+        });
+
+        // Блокируем контекстное меню (как в ТВ)
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
+        // ===== ЗАПУСК ЭФИРА =====
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("🎬 ДЕСЯТКА TV - Эфирное вещание");
+            console.log("📁 Источник: https://github.com/Home818013/Home818013.github.io/tree/main/vid");
+            
+            // Показываем заставку и инициализируем эфир
+            initializeBroadcast();
+        });
+    </script>
+</body>
+</html>
